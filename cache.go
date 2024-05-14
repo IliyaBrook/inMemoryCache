@@ -23,13 +23,6 @@ type Cache struct {
 	wg    sync.WaitGroup
 }
 
-var (
-	storage = Cache{
-		items: make(map[string]item),
-	}
-	wg sync.WaitGroup
-)
-
 func New() *Cache {
 	return &Cache{
 		items: make(map[string]item),
