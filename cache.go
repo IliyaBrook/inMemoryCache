@@ -18,14 +18,46 @@ type InterfaceCache interface {
 }
 
 type Cache struct {
-	items map[string]item
-	mu    sync.Mutex
-	wg    sync.WaitGroup
+	items      map[string]item
+	mu         sync.Mutex
+	wg         sync.WaitGroup
+	workerPool *WorkerPool
+}
+
+type Task struct {
+	key   string
+	value any
+}
+
+type WorkerPool struct {
+	tasks    chan Task
+	workerWg sync.WaitGroup
+}
+
+func NewWorkerPool(numWorkers int) *WorkerPool {
+	wp := &WorkerPool{
+		tasks: make(chan Task, numWorkers),
+	}
+	for i := 0; i < numWorkers; i++ {
+		wp.workerWg.Add(1)
+	}
+	return wp
+}
+
+func (wp *WorkerPool) AddTask(task Task) {
+	wp.tasks <- task
+}
+
+func (wp *WorkerPool) Stop() {
+	close(wp.tasks)
+	wp.workerWg.Wait()
 }
 
 func New() *Cache {
+	const numWorkers int = 5
 	return &Cache{
-		items: make(map[string]item),
+		items:      make(map[string]item),
+		workerPool: NewWorkerPool(numWorkers),
 	}
 }
 
@@ -37,9 +69,8 @@ func (c *Cache) Set(key string, value any) {
 	}
 	c.mu.Unlock()
 
-	c.wg.Add(1)
+	c.workerPool.AddTask(Task{key: key, value: value})
 	go func() {
-		defer c.wg.Done()
 		select {
 		case <-time.After(5 * time.Second):
 			c.mu.Lock()
@@ -73,4 +104,8 @@ func (c *Cache) Delete(key string) string {
 		return "Deleted successfully"
 	}
 	return "Cache not found!"
+}
+
+func (c *Cache) Stop() {
+	c.workerPool.Stop()
 }
