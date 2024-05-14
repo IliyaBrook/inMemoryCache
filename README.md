@@ -16,4 +16,4 @@ To install `InMemoryCache`, you need to have Go installed on your machine. If yo
 Once Go is installed, you can add `InMemoryCache` to your project by running:
 
 ```bash
-go get -u your-repository-url/inMemoryCache
+go get -u github.com/IliyaBrook/inMemoryCache
